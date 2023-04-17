@@ -14,3 +14,12 @@ email was signed or encrypted.
 This extension displays that information in similar way as the
 RT-builtin crypto results would be shown.
 
+# Installation
+
+See README
+
+# Licence
+
+GPL2, see LICENCE.
+
+
