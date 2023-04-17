@@ -18,8 +18,8 @@ RT-builtin crypto results would be shown.
 
 See README
 
-# Licence
+# License
 
-GPL2, see LICENCE.
+GPL2, see LICENSE.
 
 
