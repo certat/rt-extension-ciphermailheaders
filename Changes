@@ -1,4 +1,9 @@
 Revision history for RT-Extension-CipherMailHeaders
 
-1.00 2023-04-17
+1.10 2023-04-26
+ - Support for incoming MIME Encrypted Mail
+ - Remove "Unsigned!" Warning from builtin CryptStatus if CipherMail detected a signature
+
+1.00 2023-04-18
  - Initial version
+
