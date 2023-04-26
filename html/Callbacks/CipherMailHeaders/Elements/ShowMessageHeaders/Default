@@ -11,9 +11,8 @@ $display_headers => {}
 $message => undef
 </%ARGS>
 <%INIT>
-use Data::Dumper;
 
-# $RT::Logger->info("CallBack -- otmar");
+$RT::Logger->debug("RT::Extension::CipherMailHeaders: CallBack is called");
 
 my %mc_header = ();
 my $is_internal = 1;
@@ -23,7 +22,7 @@ my @smime_keys = ();
 foreach ( $message->SplitHeaders ) {
     if ( /^X-Djigzo-Info-([^:]+):\s*(.*)/i ) {
         $mc_header{$1} = $2;
-        $RT::Logger->info("RT::Extension::CipherMailHeaders: found header: $1 - $2");
+        $RT::Logger->debug("RT::Extension::CipherMailHeaders: found header: $1 - $2");
     }
     if ( /^X-Djigzo-Info-Signer-ID-(\d+-\d+):/ ) {
 		push @smime_keys, $1;
@@ -48,7 +47,9 @@ if (defined($mc_header{'PGP-Signed'}) and defined($mc_header{'PGP-Signature-Vali
 	unshift @$headers, { Tag => "Signing", Classes => ['verify', @css_class], 
 			Value => $m->interp->apply_escapes($text)};
 	$display_headers->{"signing"} = 1;
-#        $RT::Logger->info("RT::Extension::CipherMailHeaders: Adding Signing header: $text");
+	unshift @$headers, { Tag => "X-RT-Suppress-Unsigned-Warning", Value => 'True'};		# signal to BeforeLocalization callback
+	$display_headers->{"x-rt-suppress-unsigned-warning"} = 1;
+        $RT::Logger->debug("RT::Extension::CipherMailHeaders: Adding Signing header: $text");
 } 
 
 
@@ -58,12 +59,11 @@ if (defined($mc_header{'PGP-Encrypted'})) {
 	my $text;
 	if ($mc_header{'PGP-Encrypted'} eq 'True') {
 		@css_class = ("done", "trust-FULL");
-		$text = "Good PGP Encryption";
+		$text = "Message was PGP encrypted.";
 	} else {
 		@css_class = ("bad");
 		$text = "Bad PGP Encryption";
 	}
-
 # Elements/CryptStatus uses class 'decrypt', but I don't see that in any css file
 # thus we go for "verify" here
 	unshift @$headers, { Tag => "Encryption", Classes => ['verify', @css_class], 
@@ -74,12 +74,12 @@ if (defined($mc_header{'PGP-Encrypted'})) {
 # Incoming MIME signed message
 if (defined($mc_header{'Smime-Signed'})) {
 	foreach my $skey (@smime_keys) {
-		$RT::Logger->info("RT::Extension::CipherMailHeaders: Dealing with $skey");
+		$RT::Logger->debug("RT::Extension::CipherMailHeaders: Dealing with $skey");
 		next unless (defined($mc_header{"Signer-Verified-" . $skey}) and
 				defined($mc_header{"Signer-Email-" . $skey}) and
 				defined($mc_header{"Signer-Trusted-" . $skey}) and
 				defined($mc_header{"Signer-ID-" . $skey})); 
-		$RT::Logger->info("RT::Extension::CipherMailHeaders: got all headers for $skey");
+		$RT::Logger->debug("RT::Extension::CipherMailHeaders: got all headers for $skey");
 
 		my @css_class;
 		my $text;
@@ -114,8 +114,29 @@ if (defined($mc_header{'Smime-Signed'})) {
 		unshift @$headers, { Tag => $hname, Classes => ['verify', @css_class], 
 				Value => $m->interp->apply_escapes($text)};
 		$display_headers->{lc $hname} = 1;
-	        $RT::Logger->info("RT::Extension::CipherMailHeaders: Adding Signing header $hname: $text");
+		unshift @$headers, { Tag => "X-RT-Suppress-Unsigned-Warning", Value => 'True'};		# signal to BeforeLocalization callback
+		$display_headers->{"x-rt-suppress-unsigned-warning"} = 1;
+	        $RT::Logger->debug("RT::Extension::CipherMailHeaders: Adding Signing header $hname: $text");
 	}
+} 
+
+# Incoming S/MIME encrypted message
+if (defined($mc_header{'Smime-Encrypted'})) {
+	my @css_class;
+	my $text;
+	if ($mc_header{'Smime-Encrypted'} eq 'True') {
+		@css_class = ("done", "trust-FULL");
+		$text = "Message was S/MIME encrypted.";
+	} else {
+		@css_class = ("bad");
+		$text = "Bad SMIME Encryption";
+	}
+# Elements/CryptStatus uses class 'decrypt', but I don't see that in any css file
+# thus we go for "verify" here
+	unshift @$headers, { Tag => "Encryption", Classes => ['verify', @css_class], 
+			Value => $m->interp->apply_escapes($text)};
+	$display_headers->{"encryption"} = 1;
+        $RT::Logger->debug("RT::Extension::CipherMailHeaders: Adding Encryption header: $text");
 } 
 
 </%INIT>

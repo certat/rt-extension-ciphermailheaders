@@ -1,0 +1,23 @@
+%#
+%# Part of RT::Extension::CipherMail 
+%#
+%# See module for Copyright Information
+%#
+%# Otmar Lendl <lendl@cert.at> 2023-04-26
+%#
+<%ARGS>
+$headers => []
+$message => undef
+</%ARGS>
+<%INIT>
+
+if (grep { $_->{Tag} eq "X-RT-Suppress-Unsigned-Warning" } (@{$headers})) {
+	$RT::Logger->info("RT::Extension::CipherMailHeaders: BeforeLocalization found X-RT-Suppress-Unsigned-Warning");
+	@$headers = grep { !(
+		($_->{Tag} eq "X-RT-Suppress-Unsigned-Warning") 			# remove marker header
+			or
+		(($_->{Tag} eq "Signing") and ($_->{Value} !~ /Signature/))		# remove default RT warning
+		) } (@$headers);		
+}
+
+</%INIT>
